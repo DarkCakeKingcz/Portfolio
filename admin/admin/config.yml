@@ -1,0 +1,19 @@
+backend:
+  name: git-gateway
+  branch: main
+
+media_folder: "moje-obrazky"
+public_folder: "/moje-obrazky"
+
+collections:
+  - name: "projects"
+    label: "Projekty"
+    folder: "data/projects"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { label: "Název", name: "title", widget: "string" }
+      - { label: "Popis", name: "desc", widget: "text" }
+      - { label: "Datum", name: "date", widget: "datetime" }
+      - { label: "Barva", name: "color", widget: "string" }
+      - { label: "Obrázek", name: "img", widget: "image" }
