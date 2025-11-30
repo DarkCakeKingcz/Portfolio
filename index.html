@@ -443,5 +443,62 @@
       });
     });
   </script>
+  <script>
+async function loadProjects() {
+    const container = document.querySelector(".content");
+    container.innerHTML = "Načítám projekty...";
+
+    try {
+        // Načtení seznamu souborů z GitHub Pages
+        const response = await fetch("/data/projects/");
+        const html = await response.text();
+
+        // Vyhledání souborů *.json v indexu složky
+        const regex = /href="([^"]+\\.json)"/g;
+        const files = [...html.matchAll(regex)].map(m => m[1]);
+
+        let projects = [];
+
+        for (let file of files) {
+            const projectData = await fetch("/data/projects/" + file).then(r => r.json());
+            projectData.id = file;
+            projects.push(projectData);
+        }
+
+        // Seřazení projektů podle data (poslední nahoře)
+        projects.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        container.innerHTML = "";
+
+        // Generování karet
+        projects.forEach(p => {
+            const card = document.createElement("div");
+            card.className = "card";
+            card.style.cursor = "pointer";
+            card.innerHTML = `
+                <div class="card-header" style="background-color:${p.color}">
+                    ${p.title}
+                </div>
+                <img src="${p.img}" alt="${p.title}">
+                <div class="info">
+                    <h4>${p.title}</h4>
+                    <p>${p.desc}</p>
+                </div>
+            `;
+            container.appendChild(card);
+
+            // Kliknutí na kartu otevře modal
+            card.addEventListener("click", () => openModal(p));
+        });
+
+    } catch (e) {
+        container.innerHTML = "Chyba při načítání projektů.";
+        console.error(e);
+    }
+}
+
+loadProjects();
+</script>
+
 </body>
 </html>
