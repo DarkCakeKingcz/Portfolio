@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>David Kapitančik - Portfolio</title>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f0f0f0;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      background-color: #444;
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    nav a {
+      color: white;
+      margin: 0 0.5rem;
+      text-decoration: none;
+    }
+    .container {
+      display: flex;
+      flex: 1;
+    }
+    .sidebar {
+      width: 220px;
+      background-color: #ddd;
+      padding: 1rem;
+    }
+    .sidebar h3 {
+      margin-top: 0;
+    }
+
+    .menu {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .menu li {
+      margin: 0.3rem 0;
+    }
+    .menu li a,
+    .menu .toggle {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      font-weight: bold;
+      background-color: #bbb;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      text-decoration: none;
+      color: #222;
+      transition: background 0.2s ease;
+    }
+    .menu li a:hover,
+    .menu .toggle:hover {
+      background-color: #999;
+    }
+    .menu .toggle::before {
+      content: '▶';
+      display: inline-block;
+      margin-right: 5px;
+      transition: transform 0.2s;
+    }
+    .menu .open > .toggle::before {
+      transform: rotate(90deg);
+    }
+    .submenu {
+      list-style: none;
+      padding-left: 1rem;
+      margin: 0.3rem 0;
+      border-left: 2px solid #aaa;
+      display: none;
+    }
+    .submenu li a {
+      display: block;
+      padding: 0.4rem 0.8rem;
+      margin: 0.2rem 0;
+      background-color: #ccc;
+      border-radius: 5px;
+      text-decoration: none;
+      color: #222;
+      font-size: 0.9rem;
+      transition: background 0.2s ease;
+    }
+    .submenu li a:hover {
+      background-color: #aaa;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 1rem 2rem 0 2rem;
+    }
+    .toolbar select {
+      padding: 0.4rem;
+      border-radius: 5px;
+      border: 1px solid #aaa;
+      font-size: 0.9rem;
+    }
+
+    .content {
+      flex: 1;
+      padding: 2rem;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+    }
+    .card {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+      transition: transform 0.2s ease;
+      max-height: 250px;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+    }
+    .card:hover {
+      transform: scale(1.02);
+    }
+    .card-header {
+      padding: 0.5rem;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+    }
+    .card img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+    }
+    .card .info {
+      padding: 0.5rem;
+      flex: 1;
+      overflow: hidden;
+    }
+    .card .info h4 {
+      margin: 0 0 0.25rem;
+      font-size: 1rem;
+    }
+    .card .info p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #555;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.7);
+      animation: fadeIn 0.3s;
+    }
+    .modal-content {
+      background-color: #fff;
+      margin: 5% auto;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 800px;
+      animation: zoomIn 0.3s;
+      position: relative;
+    }
+    .modal-content img {
+      width: 100%;
+      max-height: 400px;
+      object-fit: contain;
+      margin-bottom: 1rem;
+    }
+    .close {
+      color: #aaa;
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .close:hover {
+      color: #000;
+    }
+
+    .modal-nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    .modal-nav button {
+      background-color: #444;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .modal-nav button:hover {
+      background-color: #222;
+    }
+
+    .modal-hint {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: #777;
+      opacity: 1;
+      transition: opacity 0.5s ease;
+    }
+    .modal-hint.hidden {
+      opacity: 0;
+    }
+
+    @keyframes fadeIn {
+      from {opacity: 0;}
+      to {opacity: 1;}
+    }
+    @keyframes zoomIn {
+      from {transform: scale(0.8); opacity: 0;}
+      to {transform: scale(1); opacity: 1;}
+    }
+
+    footer {
+      background-color: #444;
+      color: white;
+      text-align: center;
+      padding: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>David Kapitančik - Portfolio</h1>
+    <nav>
+      <a href="#">Domů</a>
+      <a href="#">Mega Galerie</a>
+      <a href="#">O mně</a>
+      <a href="#">Kontakt</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <aside class="sidebar">
+      <h3>Kategorie</h3>
+      <ul class="menu">
+        <li><a href="#">Abstraktní umění</a></li>
+        <li><a href="#">Jednoduché animace</a></li>
+        <li><a href="#">Fotografie</a></li>
+        <li class="has-submenu">
+          <div class="toggle">Reálné umění/DYI</div>
+          <ul class="submenu">
+            <li><a href="#">Obrazy</a></li>
+            <li><a href="#">Skulptury</a></li>
+            <li><a href="#">Ostatní</a></li>
+          </ul>
+        </li>
+        <li><a href="#">3D Grafika</a></li>
+        <li><a href="#">Náhleďáky (thumbnaily)</a></li>
+        <li><a href="#">Videa</a></li>
+        <li class="has-submenu">
+          <div class="toggle">Harry Potter</div>
+          <ul class="submenu">
+            <li><a href="#">Mapy</a></li>
+            <li><a href="#">Modifikace</a></li>
+          </ul>
+        </li>
+        <li class="has-submenu">
+          <div class="toggle">Textury</div>
+          <ul class="submenu">
+            <li><a href="#">Originální</a></li>
+            <li><a href="#">Upravené</a></li>
+          </ul>
+        </li>
+        <li><a href="#">Překlady her</a></li>
+        <li><a href="#">Zakázky</a></li>
+      </ul>
+    </aside>
+
+    <div style="flex:1; display:flex; flex-direction:column;">
+      <div class="toolbar">
+        <label for="sort">Seřadit podle: </label>
+        <select id="sort">
+          <option value="date-desc">Data (nejnovější)</option>
+          <option value="date-asc">Data (nejstarší)</option>
+          <option value="title-asc">Názvu (A–Z)</option>
+          <option value="title-desc">Názvu (Z–A)</option>
+        </select>
+      </div>
+
+      <main class="content" id="cardContainer">
+        <!-- Karty se generují automaticky -->
+      </main>
+    </div>
+  </div>
+
+  <div id="imgModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h2 id="modalTitle"></h2>
+      <img id="modalImg" src="" alt="">
+      <p id="modalDesc"></p>
+      <div class="modal-nav">
+        <button onclick="prevModal()">&laquo; Předchozí</button>
+        <button onclick="nextModal()">Další &raquo;</button>
+      </div>
+      <div id="modalHint" class="modal-hint">Použij šipky ← → pro listování, Esc pro zavření</div>
+    </div>
+  </div>
+
+  <footer>
+    © 2025 Moje Portfolio
+  </footer>
+
+  <script>
+    const projects = [
+      { img: 'moje-obrazky/fotka1.png', title: 'Název projektu 1', desc: 'Delší popisek k projektu 1, který se ukáže po rozkliknutí.', color: '#4682b4', date: '2025-09-01' },
+      { img: 'moje-obrazky/projekt2.png', title: 'Název projektu 2', desc: 'Delší popis nebo update k projektu 2.', color: '#b44682', date: '2025-08-15' },
+      { img: 'moje-obrazky/projekt3.png', title: 'Název projektu 3', desc: 'Více informací o projektu 3, které se ukáží po kliknutí.', color: '#82b446', date: '2025-08-20' },
+      { img: 'moje-obrazky/projekt4.png', title: 'Název projektu 4', desc: 'Další krátký popis projektu 4.', color: '#82a446', date: '2025-07-10' },
+      { img: 'moje-obrazky/projekt5.png', title: 'Název projektu 5', desc: 'Delší popis projektu 5.', color: '#468246', date: '2025-09-05' },
+      { img: 'moje-obrazky/projekt6.png', title: 'Název projektu 6', desc: 'Delší popis projektu 6.', color: '#264653', date: '2025-09-02' },
+      { img: 'moje-obrazky/projekt7.png', title: 'Název projektu 7', desc: 'Delší popis projektu 7.', color: '#e76f51', date: '2025-09-08' }
+    ];
+
+    let currentIndex = 0;
+    let displayedProjects = [...projects];
+
+    const container = document.getElementById('cardContainer');
+    const sortSelect = document.getElementById('sort');
+
+    function renderProjects(sortBy) {
+      container.innerHTML = '';
+      displayedProjects = [...projects];
+
+      if (sortBy === 'title-asc') {
+        displayedProjects.sort((a, b) => a.title.localeCompare(b.title));
+      } else if (sortBy === 'title-desc') {
+        displayedProjects.sort((a, b) => b.title.localeCompare(a.title));
+      } else if (sortBy === 'date-asc') {
+        displayedProjects.sort((a, b) => new Date(a.date) - new Date(b.date));
+      } else {
+        displayedProjects.sort((a, b) => new Date(b.date) - new Date(a.date));
+      }
+
+      displayedProjects.forEach((project, index) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.onclick = () => openModal(index);
+        card.innerHTML = `
+          <div class="card-header" style="background-color:${project.color};">
+            ${project.title}
+          </div>
+          <img src="${project.img}" alt="${project.title}">
+          <div class="info">
+            <h4>${project.title}</h4>
+            <p>${project.desc}</p>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    sortSelect.addEventListener('change', (e) => {
+      renderProjects(e.target.value);
+    });
+
+    renderProjects('date-desc');
+
+    function openModal(index) {
+      currentIndex = index;
+      const project = displayedProjects[index];
+      document.getElementById('modalImg').src = project.img;
+      document.getElementById('modalTitle').innerText = project.title;
+      document.getElementById('modalDesc').innerText = project.desc;
+      document.getElementById('imgModal').style.display = 'block';
+
+      const hint = document.getElementById('modalHint');
+      hint.classList.remove('hidden');
+      setTimeout(() => hint.classList.add('hidden'), 3000);
+    }
+
+    function closeModal() {
+      document.getElementById('imgModal').style.display = 'none';
+    }
+
+    function prevModal() {
+      currentIndex = (currentIndex - 1 + displayedProjects.length) % displayedProjects.length;
+      openModal(currentIndex);
+    }
+
+    function nextModal() {
+      currentIndex = (currentIndex + 1) % displayedProjects.length;
+      openModal(currentIndex);
+    }
+
+    window.onclick = function(event) {
+      let modal = document.getElementById('imgModal');
+      if (event.target == modal) {
+        modal.style.display = "none";
+      }
+    }
+
+    window.addEventListener('keydown', function(event) {
+      if (document.getElementById('imgModal').style.display === 'block') {
+        if (event.key === 'ArrowLeft') {
+          prevModal();
+        } else if (event.key === 'ArrowRight') {
+          nextModal();
+        } else if (event.key === 'Escape') {
+          closeModal();
+        }
+      }
+    });
+
+    document.querySelectorAll('.has-submenu .toggle').forEach(toggle => {
+      toggle.addEventListener('click', () => {
+        const parent = toggle.parentElement;
+        parent.classList.toggle('open');
+        const submenu = parent.querySelector('.submenu');
+        submenu.style.display = submenu.style.display === 'block' ? 'none' : 'block';
+      });
+    });
+  </script>
+</body>
+</html>
