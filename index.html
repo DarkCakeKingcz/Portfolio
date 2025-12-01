@@ -9,6 +9,7 @@
   <link rel="icon" type="image/png" href="favicon.png">
 
   <style>
+    /* --- (ponechal jsem tvé původní styly beze změny) --- */
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
@@ -248,6 +249,15 @@
       text-align: center;
       padding: 1rem;
     }
+
+    /* malé vylepšení pro responsivitu */
+    @media (max-width: 900px) {
+      .content { grid-template-columns: repeat(2, 1fr); }
+      .sidebar { display: none; } /* případně skrytí sidebaru na mobilech */
+    }
+    @media (max-width: 480px) {
+      .content { grid-template-columns: repeat(1, 1fr); }
+    }
   </style>
 </head>
 <body>
@@ -300,7 +310,7 @@
 
     <div style="flex:1; display:flex; flex-direction:column;">
       <div class="toolbar">
-        <label for="sort">Seřadit podle: </label>
+        <label for="sort">Seřadit podle:&nbsp;</label>
         <select id="sort">
           <option value="date-desc">Data (nejnovější)</option>
           <option value="date-asc">Data (nejstarší)</option>
@@ -310,7 +320,7 @@
       </div>
 
       <main class="content" id="cardContainer">
-        <!-- Karty se generují automaticky -->
+        <!-- Karty se generují automaticky z JSONů -->
       </main>
     </div>
   </div>
@@ -322,8 +332,8 @@
       <img id="modalImg" src="" alt="">
       <p id="modalDesc"></p>
       <div class="modal-nav">
-        <button onclick="prevModal()">&laquo; Předchozí</button>
-        <button onclick="nextModal()">Další &raquo;</button>
+        <button id="prevBtn">&laquo; Předchozí</button>
+        <button id="nextBtn">Další &raquo;</button>
       </div>
       <div id="modalHint" class="modal-hint">Použij šipky ← → pro listování, Esc pro zavření</div>
     </div>
@@ -334,66 +344,110 @@
   </footer>
 
   <script>
-    const projects = [
-      { img: 'moje-obrazky/fotka1.png', title: 'Název projektu 1', desc: 'Delší popisek k projektu 1, který se ukáže po rozkliknutí.', color: '#4682b4', date: '2025-09-01' },
-      { img: 'moje-obrazky/projekt2.png', title: 'Název projektu 2', desc: 'Delší popis nebo update k projektu 2.', color: '#b44682', date: '2025-08-15' },
-      { img: 'moje-obrazky/projekt3.png', title: 'Název projektu 3', desc: 'Více informací o projektu 3, které se ukáží po kliknutí.', color: '#82b446', date: '2025-08-20' },
-      { img: 'moje-obrazky/projekt4.png', title: 'Název projektu 4', desc: 'Další krátký popis projektu 4.', color: '#82a446', date: '2025-07-10' },
-      { img: 'moje-obrazky/projekt5.png', title: 'Název projektu 5', desc: 'Delší popis projektu 5.', color: '#468246', date: '2025-09-05' },
-      { img: 'moje-obrazky/projekt6.png', title: 'Název projektu 6', desc: 'Delší popis projektu 6.', color: '#264653', date: '2025-09-02' },
-      { img: 'moje-obrazky/projekt7.png', title: 'Název projektu 7', desc: 'Delší popis projektu 7.', color: '#e76f51', date: '2025-09-08' }
-    ];
-
+    // --- Globální proměnné ---
+    let displayedProjects = []; // projekty načtené z JSONů (current view)
     let currentIndex = 0;
-    let displayedProjects = [...projects];
 
     const container = document.getElementById('cardContainer');
     const sortSelect = document.getElementById('sort');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
 
-    function renderProjects(sortBy) {
+    // --- Pomocná funkce pro render ---
+    function renderDisplayedProjects() {
       container.innerHTML = '';
-      displayedProjects = [...projects];
+      // seřadit podle volby
+      const sortBy = sortSelect.value;
+      let sorted = [...displayedProjects];
 
       if (sortBy === 'title-asc') {
-        displayedProjects.sort((a, b) => a.title.localeCompare(b.title));
+        sorted.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
       } else if (sortBy === 'title-desc') {
-        displayedProjects.sort((a, b) => b.title.localeCompare(a.title));
+        sorted.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
       } else if (sortBy === 'date-asc') {
-        displayedProjects.sort((a, b) => new Date(a.date) - new Date(b.date));
-      } else {
-        displayedProjects.sort((a, b) => new Date(b.date) - new Date(a.date));
+        sorted.sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
+      } else { // date-desc
+        sorted.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
       }
 
-      displayedProjects.forEach((project, index) => {
+      // vynulovat currentIndex, protože indexy se mohou měnit po přerenderu
+      displayedProjects = sorted;
+
+      sorted.forEach((project, index) => {
         const card = document.createElement('div');
         card.className = 'card';
         card.onclick = () => openModal(index);
         card.innerHTML = `
-          <div class="card-header" style="background-color:${project.color};">
-            ${project.title}
+          <div class="card-header" style="background-color:${project.color || '#666'};">
+            ${project.title || ''}
           </div>
-          <img src="${project.img}" alt="${project.title}">
+          <img src="${project.img || ''}" alt="${project.title || ''}">
           <div class="info">
-            <h4>${project.title}</h4>
-            <p>${project.desc}</p>
+            <h4>${project.title || ''}</h4>
+            <p>${project.desc || ''}</p>
           </div>
         `;
         container.appendChild(card);
       });
     }
 
-    sortSelect.addEventListener('change', (e) => {
-      renderProjects(e.target.value);
-    });
+    // --- Načítání projektů z data/projects/ ---
+    async function loadProjects() {
+      container.innerHTML = "Načítám projekty...";
+      try {
+        // Pokusíme se načíst index složky (funguje na GitHub Pages / některých hostech)
+        const resp = await fetch('/data/projects/');
+        const html = await resp.text();
 
-    renderProjects('date-desc');
+        // Najdeme linky na *.json v indexu složky
+        const regex = /href="([^"]+\.json)"/g;
+        const files = [...html.matchAll(regex)].map(m => m[1]);
 
+        const projects = [];
+        for (let file of files) {
+          try {
+            const p = await fetch('/data/projects/' + file).then(r => r.json());
+            projects.push(p);
+          } catch (err) {
+            console.warn('Chyba načtení', file, err);
+          }
+        }
+
+        // Fallback: pokud žádné soubory nenajdeme, zkus najít přímo "projects.json"
+        if (projects.length === 0) {
+          try {
+            const single = await fetch('/data/projects.json');
+            if (single.ok) {
+              const arr = await single.json();
+              if (Array.isArray(arr)) displayedProjects = arr;
+              else displayedProjects = [];
+            } else {
+              displayedProjects = [];
+            }
+          } catch(e) {
+            displayedProjects = [];
+          }
+        } else {
+          displayedProjects = projects;
+        }
+
+        // render
+        renderDisplayedProjects();
+
+      } catch (e) {
+        console.error('Chyba při načítání projektů:', e);
+        container.innerHTML = "Chyba při načítání projektů. Zkontroluj, že máš soubory v /data/projects/";
+      }
+    }
+
+    // --- Modal / ovládání ---
     function openModal(index) {
       currentIndex = index;
       const project = displayedProjects[index];
-      document.getElementById('modalImg').src = project.img;
-      document.getElementById('modalTitle').innerText = project.title;
-      document.getElementById('modalDesc').innerText = project.desc;
+      if (!project) return;
+      document.getElementById('modalImg').src = project.img || '';
+      document.getElementById('modalTitle').innerText = project.title || '';
+      document.getElementById('modalDesc').innerText = project.desc || '';
       document.getElementById('imgModal').style.display = 'block';
 
       const hint = document.getElementById('modalHint');
@@ -406,34 +460,33 @@
     }
 
     function prevModal() {
+      if (displayedProjects.length === 0) return;
       currentIndex = (currentIndex - 1 + displayedProjects.length) % displayedProjects.length;
       openModal(currentIndex);
     }
 
     function nextModal() {
+      if (displayedProjects.length === 0) return;
       currentIndex = (currentIndex + 1) % displayedProjects.length;
       openModal(currentIndex);
     }
 
-    window.onclick = function(event) {
-      let modal = document.getElementById('imgModal');
-      if (event.target == modal) {
-        modal.style.display = "none";
-      }
-    }
-
-    window.addEventListener('keydown', function(event) {
+    // Události
+    prevBtn.addEventListener('click', prevModal);
+    nextBtn.addEventListener('click', nextModal);
+    document.querySelector('.close').addEventListener('click', closeModal);
+    window.addEventListener('click', (e) => {
+      if (e.target === document.getElementById('imgModal')) closeModal();
+    });
+    window.addEventListener('keydown', (e) => {
       if (document.getElementById('imgModal').style.display === 'block') {
-        if (event.key === 'ArrowLeft') {
-          prevModal();
-        } else if (event.key === 'ArrowRight') {
-          nextModal();
-        } else if (event.key === 'Escape') {
-          closeModal();
-        }
+        if (e.key === 'ArrowLeft') prevModal();
+        else if (e.key === 'ArrowRight') nextModal();
+        else if (e.key === 'Escape') closeModal();
       }
     });
 
+    // Sidebar submenu toggles
     document.querySelectorAll('.has-submenu .toggle').forEach(toggle => {
       toggle.addEventListener('click', () => {
         const parent = toggle.parentElement;
@@ -442,63 +495,14 @@
         submenu.style.display = submenu.style.display === 'block' ? 'none' : 'block';
       });
     });
+
+    // Change pořadí (select)
+    sortSelect.addEventListener('change', () => {
+      renderDisplayedProjects();
+    });
+
+    // start
+    loadProjects();
   </script>
-  <script>
-async function loadProjects() {
-    const container = document.querySelector(".content");
-    container.innerHTML = "Načítám projekty...";
-
-    try {
-        // Načtení seznamu souborů z GitHub Pages
-        const response = await fetch("/data/projects/");
-        const html = await response.text();
-
-        // Vyhledání souborů *.json v indexu složky
-        const regex = /href="([^"]+\\.json)"/g;
-        const files = [...html.matchAll(regex)].map(m => m[1]);
-
-        let projects = [];
-
-        for (let file of files) {
-            const projectData = await fetch("/data/projects/" + file).then(r => r.json());
-            projectData.id = file;
-            projects.push(projectData);
-        }
-
-        // Seřazení projektů podle data (poslední nahoře)
-        projects.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        container.innerHTML = "";
-
-        // Generování karet
-        projects.forEach(p => {
-            const card = document.createElement("div");
-            card.className = "card";
-            card.style.cursor = "pointer";
-            card.innerHTML = `
-                <div class="card-header" style="background-color:${p.color}">
-                    ${p.title}
-                </div>
-                <img src="${p.img}" alt="${p.title}">
-                <div class="info">
-                    <h4>${p.title}</h4>
-                    <p>${p.desc}</p>
-                </div>
-            `;
-            container.appendChild(card);
-
-            // Kliknutí na kartu otevře modal
-            card.addEventListener("click", () => openModal(p));
-        });
-
-    } catch (e) {
-        container.innerHTML = "Chyba při načítání projektů.";
-        console.error(e);
-    }
-}
-
-loadProjects();
-</script>
-
 </body>
 </html>
